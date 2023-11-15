@@ -1,4 +1,4 @@
-# awesome-rag
+# Collection of RAG best practices, notebooks and applications
 
 # RAG phases
 - Loading
