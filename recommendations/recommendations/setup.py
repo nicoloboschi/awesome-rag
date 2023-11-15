@@ -12,7 +12,7 @@ from astrapy.db import (
 
 def get_openai_token() -> str:
     return os.getenv("OPENAI_API_KEY",
-                     "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")
+                     "")
 
 
 def create_astra_vector_store(collection: str) -> AstraDB:
