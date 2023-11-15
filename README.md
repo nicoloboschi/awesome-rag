@@ -42,11 +42,15 @@ Sub-queries: LLMs tend to work better when they break down complex queries. You 
 
 
 
-# Techniques
+# Techniques (to summarize)
 
 - Re ranking
 - MuRAG  Multimodal Retrieval-Augmented Transforme - Rag for Images  - https://arxiv.org/abs/2210.02928
 - REALM - Retrieval-Augmented Language Model -  https://arxiv.org/abs/2002.08909
+- BART with Retrieval
+- BM25
+- ColBERT Model
+- DPR (Document Passage Retrieval) Model.
 
 
 # Resources
