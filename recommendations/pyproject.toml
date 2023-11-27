@@ -8,6 +8,12 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.9"
 ragstack-ai = "^0.1.0"
+fastapi = "^0.104.1"
+uvicorn = "^0.24.0.post1"
+requests = "^2.31.0"
+tenacity = "^8.2.3"
+numpy = "^1.26.2"
+python-dateutil = "^2.8.2"
 
 
 [build-system]

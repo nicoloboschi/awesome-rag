@@ -9,7 +9,7 @@ from langchain.schema import StrOutputParser, Document
 from langchain.schema.runnable import RunnableMap, RunnableLambda
 from langchain.vectorstores import AstraDB
 
-from recommendations.recommendations.util import create_astra_vector_store, get_openai_token, USERS_COLLECTION_NAME, \
+from util import create_astra_vector_store, get_openai_token, USERS_COLLECTION_NAME, \
     PRODUCTS_COLLECTION_NAME
 
 RESPONSE_TEMPLATE = """
@@ -23,9 +23,6 @@ Each `item` in the following `products` html blocks, is a possible product to re
   {possible_products}
 <products/>
 
-{user_info}
-
-
 
 For each product recommended, add a field explaining why you think they would buy those product
 Also include a short comparison between it and the similar product mentioned earlier. 
@@ -36,32 +33,36 @@ Each item has a "product_info" field - as json object - containing the 'metadata
 and a "reason" field containing the reason.
 """
 
+os.environ["LANGCHAIN_TRACING_V2"] = "false"
+os.environ["LANGCHAIN_ENDPOINT"] = "http://localhost:8000"
+os.environ["LANGCHAIN_API_KEY"] = "xxx"
+astra_vector_store = create_astra_vector_store(PRODUCTS_COLLECTION_NAME)
+llm = ChatOpenAI(
+        openai_api_key=get_openai_token(),
+        model="gpt-4",
+        streaming=True,
+        temperature=0,
+    )
+print("using collection: " + PRODUCTS_COLLECTION_NAME)
 
 def main():
-    print("using collection: " + PRODUCTS_COLLECTION_NAME)
-    astra_vector_store = create_astra_vector_store(PRODUCTS_COLLECTION_NAME)
-    retriever = astra_vector_store.as_retriever()
+    while True:
+        product = input("Product?\n")
+        response = get_recommendation_for_product({"name": product, "description": product})
+        print("\nSuggested products:\n")
+        for suggested in response:
+            print(suggested["product_info"]["NAME"] + " - " + suggested["product_info"]["PRICE"] + "$. " + suggested[
+                "reason"])
+        print("\n")
 
-    def user_info(user):
-        user_info = astra_vector_store.astra_db.collection(USERS_COLLECTION_NAME).find_one({
-            "handle": user,
-        })
-        if user_info["data"]["document"]:
-            return f"""
-            Additionally, In the following JSON object there are some information about the user that you can use to make the recommendation.
-            {json.dumps({
-                "first_name": user_info["data"]["document"]["first_name"],
-                "last_name": user_info["data"]["document"]["last_name"],
-                "age": user_info["data"]["document"]["age"],
-                "gender": user_info["data"]["document"]["gender"],
-            })}
-            """
-        return ""
 
+def get_recommendation_for_product(product_info):
+    retriever = astra_vector_store.as_retriever(k=10)
     def format_possible_products(docs: Sequence[Document]) -> str:
         formatted_docs = []
         for doc in enumerate(docs):
             actual_doc = doc[1]
+            print(actual_doc)
             metadata = json.dumps(actual_doc.metadata)
 
             doc_string = f"<product metadata='{metadata}'>{actual_doc.page_content}</product>"
@@ -69,14 +70,19 @@ def main():
         return "\n".join(formatted_docs)
 
     def format_response(text):
-        return json.loads(text)
+        as_list = json.loads(text)
+        result = []
+        for item in as_list:
+            result.append({
+                "name": item["product_info"]["NAME"],
+                "description": item["product_info"]["DESCRIPTION"],
+                "id": item["product_info"]["ID"],
+                "price": item["product_info"]["PRICE"],
+                "reason": item["reason"]
+            })
+        return result
 
-    llm = ChatOpenAI(
-        openai_api_key=get_openai_token(),
-        model="gpt-3.5-turbo-16k",
-        streaming=True,
-        temperature=0,
-    )
+
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", RESPONSE_TEMPLATE)
@@ -89,25 +95,17 @@ def main():
     retrieve_chain = RunnableMap(
         {
             "product": itemgetter("product"),
-            "possible_products": itemgetter("product") | retriever | format_possible_products,
-            "user_info": itemgetter("user") | RunnableLambda(user_info)
+            "possible_products": itemgetter("product_description") | retriever | format_possible_products
         }
     ).with_config(run_name="RetrieveDocs")
 
-    while True:
-        user = input("User handle? ['max', 'adele']\n")
-        product = input("Product?\n")
-        response = (
-                retrieve_chain | chain
-        ).invoke({
-            "product": product,
-            "user": user
-        })
-        print("\nSuggested products:\n")
-        for suggested in response:
-            print(suggested["product_info"]["NAME"] + " - " + suggested["product_info"]["PRICE"] + "$. " + suggested[
-                "reason"])
-        print("\n")
+    response = (
+            retrieve_chain | chain
+    ).invoke({
+        "product": product_info["name"],
+        "product_description": product_info["description"]
+    })
+    return response
 
 
 if __name__ == '__main__':

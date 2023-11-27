@@ -13,6 +13,7 @@ from astrapy.db import (
 
 PRODUCTS_COLLECTION_NAME = "products"
 USERS_COLLECTION_NAME = "users"
+RECOMMENDATIONS_COLLECTION_NAME = "recommendations"
 
 
 def get_openai_token() -> str:
@@ -24,8 +25,8 @@ def create_astra_vector_store(collection: str) -> AstraDB:
     return AstraDB(
         collection_name=collection,
         embedding=OpenAIEmbeddings(openai_api_key=get_openai_token()),
-        token=os.getenv("ASTRA_DB_TOKEN", ""),
-        api_endpoint=os.getenv("ASTRA_DB_ENDPOINT", "")
+        token=get_astra_token(),
+        api_endpoint=get_astra_api_endpoint()
     )
 
 
@@ -37,10 +38,10 @@ def create_raw_astra_client() -> LibAstraDB:
 
 
 def get_astra_api_endpoint():
-    return os.getenv("ASTRA_DB_ENDPOINT", "")
+    return os.getenv("DEMO_PRODUCTS_ASTRA_DB_ENDPOINT", "")
 
 
 def get_astra_token():
-    return os.getenv("ASTRA_DB_TOKEN", "")
+    return os.getenv("DEMO_PRODUCTS_ASTRA_TOKEN", "")
 
 
