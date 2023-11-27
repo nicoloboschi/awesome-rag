@@ -72,7 +72,6 @@ def display_products():
             st.write("---")
 
 if __name__ == "__main__":
-    print("start..")
     if 'selected_product' in st.session_state and st.session_state.selected_product:
         display_product_details()
     else:

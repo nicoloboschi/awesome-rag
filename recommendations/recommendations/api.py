@@ -7,6 +7,9 @@ from pydantic import BaseModel
 from get_recommendation import get_recommendation_for_product
 from util import create_raw_astra_client
 
+use_sync = True
+#use_sync = False
+
 app = FastAPI()
 
 astra_client = create_raw_astra_client()
@@ -38,8 +41,7 @@ def parse_product(doc):
 
 
 def get_recommendations(selected_product, session_id):
-    use_sync = False
-    #use_sync = True
+
     if use_sync:
         print("Getting recommendation sync")
         result = get_recommendation_for_product(selected_product)
@@ -53,7 +55,6 @@ def get_recommendations(selected_product, session_id):
         if response.status_code != 200:
             print(f"Error while calling langstream: {response.status_code} - {response.text}")
         return find_async_recommendations(session_id)
-    return []
 
 
 def find_async_recommendations(session_id):
@@ -76,10 +77,6 @@ def get_product_by_id(product_id: int, session_id: str):
             "recommended_products": get_recommendations(selected_product, session_id)
         }
     return {"message": f"Product {product_id} not found"}, 404
-
-@app.post("/invoke")
-def invoke():
-    return {"message": "This is a fixed JSON response"}
 
 if __name__ == "__main__":
     import uvicorn
